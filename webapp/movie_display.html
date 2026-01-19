@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карточка Фильма</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to bottom, #1a1a1a, #000);
+            color: #fff;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .movie-card {
+            background: rgba(25, 25, 25, 0.95);
+            border-radius: 16px;
+            padding: 30px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .cover {
+            width: 100%;
+            height: auto;
+            max-height: 400px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid #e50914;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        }
+        .title { font-size: 2em; font-weight: 700; color: #e50914; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .director, .year, .genres { font-size: 1.1em; color: #aaa; margin-bottom: 8px; }
+        .rating { font-size: 1.6em; color: #fff; margin-bottom: 25px; font-weight: 700; }
+        .rating span { color: #e50914; }
+        .button-group button, .actions button {
+            display: block;
+            width: 100%;
+            padding: 14px 0;
+            margin-bottom: 10px;
+            background: #e50914;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+        .button-group button:hover, .actions button:hover { background: #f40a1c; }
+        .actions button { background: #3a3a3a; margin-top: 15px; }
+        .actions button:hover { background: #555; }
+        .back-button {
+            margin-top: 30px;
+            padding: 12px 25px;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .back-button:hover { background: #555; }
+        .icon { margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <div class="movie-card">
+        <img id="cover" class="cover" src="" alt="Movie Cover">
+        <div id="title" class="title"></div>
+        <div id="director" class="director"><span class="icon">🎬</span>Режиссер: <span></span></div>
+        <div id="year" class="year"><span class="icon">📅</span>Год: <span></span></div>
+        <div id="genres" class="genres"><span class="icon">🎭</span>Жанры: <span></span></div>
+        <div id="rating" class="rating">Общий рейтинг: <span>N/A</span> ⭐️</div>
+
+        <div class="button-group">
+            <button onclick="rateMovie()"><span class="icon">⭐️</span> ОЦЕНИТЬ (RZT СТИЛЬ)</button>
+            <button onclick="showDirector()"><span class="icon">🎥</span> КАРТОЧКА РЕЖИССЕРА</button>
+        </div>
+        <div class="actions">
+             <button id="watchlistButton" onclick="toggleWatchlist()"><span class="icon">❤️</span> Добавить в список</button>
+        </div>
+    </div>
+    <button class="back-button" onclick="goBack()">ЗАКРЫТЬ</button>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const webAppBaseUrl = new URL(window.location.href).origin + new URL(window.location.href).pathname.split('/').slice(0, -1).join('/') + '/';
+
+        function getUrlParams() {
+            const params = {};
+            new URLSearchParams(window.location.search).forEach((value, key) => {
+                params[key] = decodeURIComponent(value);
+            });
+            return params;
+        }
+
+        const params = getUrlParams();
+        const mid = params.mid;
+        const movieTitle = params.title || 'Неизвестный фильм';
+        const movieDirector = params.director || 'Неизвестный режиссер';
+        const movieCover = params.cover_url || 'https://via.placeholder.com/450x600/303030/FFFFFF?text=NO+COVER';
+        const movieYear = params.year || 'N/A';
+        const movieGenres = params.genres || 'Неизвестно';
+        const movieRating = params.avg_rating ? parseFloat(params.avg_rating).toFixed(1) : '0.0';
+
+        document.getElementById('title').innerText = movieTitle;
+        document.querySelector('#director span').innerText = movieDirector;
+        document.querySelector('#year span').innerText = movieYear;
+        document.querySelector('#genres span').innerText = movieGenres.split(',').join(', ');
+        document.querySelector('#rating span').innerText = movieRating;
+        document.getElementById('cover').src = movieCover;
+
+        // Функции для кнопок
+        function rateMovie() {
+            if (mid) {
+                // Передаем текущие значения для предзаполнения формы оценки
+                const rateUrl = `${webAppBaseUrl}index.html?mid=${mid}&title=${encodeURIComponent(movieTitle)}&comment=${encodeURIComponent(params.comment || '')}&c1=${params.c1 || 5}&c2=${params.c2 || 5}&c3=${params.c3 || 5}&c4=${params.c4 || 5}`;
+                tg.openWebApp(rateUrl);
+            } else {
+                tg.showAlert('Ошибка: Невозможно открыть форму оценки.');
+            }
+        }
+
+        function showDirector() {
+            if (movieDirector) {
+                 // Открываем карточку режиссера, передавая его имя
+                 // Сам director_display.html запросит у
+бота его фильмы
+                tg.openWebApp(`${webAppBaseUrl}director_display.html?director_name=${encodeURIComponent(movieDirector)}`);
+            } else {
+                tg.showAlert('Информация о режиссере отсутствует.');
+            }
+        }
+
+        // --- Логика для кнопки "Список желаний" ---
+        const watchlistButton = document.getElementById('watchlistButton');
+        const watchlistText = watchlistButton.querySelector('span:last-child');
+
+        // Проверяем, добавлен ли фильм в список (параметр передается из бота)
+        const isInWatchlist = params.in_watchlist === 'true'; // Передается как строка 'true'/'false'
+        updateWatchlistButton(isInWatchlist);
+
+        function toggleWatchlist() {
+             // Отправляем сообщение боту через sendData, чтобы он обновил БД
+             // Сообщение должно содержать action (add/remove) и movie_id
+             const action = isInWatchlist ? 'remove' : 'add';
+             tg.sendData(JSON.stringify({ action: 'watchlist', movie_id: mid, action_type: action }));
+             tg.close(); // Закрываем WebApp, бот отправит подтверждение
+        }
+
+        function updateWatchlistButton(isIn) {
+            if (isIn) {
+                watchlistButton.style.background = '#3a3a3a'; // Серый фон, если в списке
+                watchlistButton.style.marginTop = '15px';
+                watchlistButton.querySelector('.icon').innerText = '✅'; // Галочка
+                watchlistText.innerText = 'В списке желаний';
+            } else {
+                watchlistButton.style.background = '#e50914'; // Красный фон, если не в списке
+                watchlistButton.style.marginTop = '15px';
+                watchlistButton.querySelector('.icon').innerText = '❤️'; // Сердце
+                watchlistText.innerText = 'Добавить в список';
+            }
+        }
+
+        function goBack() {
+            tg.close();
+        }
+    </script>
+</body>
+</html>

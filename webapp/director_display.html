@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карточка Режиссера</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to bottom, #1a1a1a, #000);
+            color: #fff;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .director-card {
+            background: rgba(25, 25, 25, 0.95);
+            border-radius: 16px;
+            padding: 30px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .name { font-size: 2em; font-weight: 700; color: #e50914; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        .rating { font-size: 1.6em; color: #fff; margin-bottom: 25px; font-weight: 700; }
+        .rating span { color: #e50914; }
+        .movies-list { margin-top: 30px; text-align: left; width: 100%; }
+        .movies-list h3 { color: #e50914; font-size: 1.4em; margin-bottom: 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding-bottom: 10px; }
+        .movie-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #2a2a2a;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .movie-item:hover { background: #3a3a3a; }
+        .movie-thumb {
+            width: 60px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-right: 15px;
+            border: 1px solid #e50914;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        }
+        .movie-title { font-size: 1.1em; color: #fff; font-weight: 700; flex-grow: 1; }
+        .no-movies { color: #aaa; font-style: italic; padding: 20px 0; }
+        .back-button {
+            margin-top: 30px;
+            padding: 12px 25px;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .back-button:hover { background: #555; }
+        .icon { margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <div class="director-card">
+        <div id="name" class="name"></div>
+        <div id="rating" class="rating"><span class="icon">⭐️</span> Средний рейтинг работ: <span>N/A</span></div>
+
+        <div class="movies-list">
+            <h3><span class="icon">🎬</span> ФИЛЬМОГРАФИЯ:</h3>
+            <div id="moviesContainer">
+                <!-- Movies will be injected here by JS -->
+            </div>
+        </div>
+    </div>
+    <button class="back-button" onclick="goBack()">ЗАКРЫТЬ</button>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const webAppBaseUrl = new URL(window.location.href).origin + new URL(window.location.href).pathname.split('/').slice(0, -1).join('/') + '/';
+
+        function getUrlParams() {
+            const params = {};
+            new URLSearchParams(window.location.search).forEach((value, key) => {
+                params[key] = decodeURIComponent(value);
+            });
+            return params;
+        }
+
+        const params = getUrlParams();
+        const directorName = params.director_name || 'Неизвестный режиссер';
+        const directorRating = params.avg_rating_dir || '0.0';
+        const moviesJson = params.movies_json;
+
+        document.getElementById('name').innerText = directorName;
+        document.querySelector('#rating span').innerText = directorRating;
+
+        const moviesContainer = document.getElementById('moviesContainer');
+        if (moviesJson) {
+            try {
+                const movies = JSON.parse(moviesJson);
+                if (movies && movies.length > 0) {
+                    movies.forEach(movie => {
+                        const movieItem = document.createElement('div');
+                        movieItem.className = 'movie-item';
+                        movieItem.onclick = () => openMovieCard(movie);
+
+                        const thumb = document.createElement('img');
+                        thumb.className = 'movie-thumb';
+                        thumb.src = movie.cover_url || 'https://via.placeholder.com/60x90/303030/FFFFFF?text=NO';
+                        thumb.alt = movie.title;
+
+                        const titleDiv = document.createElement('div');
+                        titleDiv.className = 'movie-title';
+                        titleDiv.innerText = movie.title.toUpperCase();
+
+                        movieItem.appendChild(thumb);
+                        movieItem.appendChild(titleDiv);
+                        moviesContainer.appendChild(movieItem);
+                    });
+                } else {
+                    moviesContainer.innerHTML = '<p class="no-movies">Фильмография пуста или фильмы не оценены.</p>';
+                }
+            } catch (e) {
+                console.error("Error parsing movies JSON:", e);
+                moviesContainer.innerHTML = '<p class="no-movies">Ошибка загрузки фильмографии.</p>';
+            }
+        } else {
+            moviesContainer.innerHTML = '<p class="no-movies">Информация о фильмах отсутствует.</p>';
+        }
+
+        function openMovieCard(movie) {
+            // Здесь мы НЕ передаем 'in_watchlist' напрямую, так как эта страница не знает о списке пользователя
+            // Бот должен будет сам определить это при получении кома
+нды watchlist
+            tg.openWebApp(`${webAppBaseUrl}movie_display.html?mid=${movie.id}&title=${encodeURIComponent(movie.title)}&director=${encodeURIComponent(directorName)}&cover_url=${encodeURIComponent(movie.cover_url || '')}`);
+        }
+
+        function goBack() {
+            tg.close();
+        }
+    </script>
+</body>
+</html>

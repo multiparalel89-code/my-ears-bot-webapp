@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Список Желаний</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to bottom, #1a1a1a, #000);
+            color: #fff;
+            padding: 20px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .watchlist-container {
+            background: rgba(25, 25, 25, 0.95);
+            border-radius: 16px;
+            padding: 30px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .header {
+            color: #e50914;
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .movie-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #2a2a2a;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            position: relative;
+        }
+        .movie-item:hover { background: #3a3a3a; }
+        .movie-thumb {
+            width: 50px;
+            height: 75px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-right: 15px;
+            border: 1px solid #e50914;
+        }
+        .movie-title { font-size: 1.1em; color: #fff; font-weight: 700; flex-grow: 1; }
+        .remove-btn {
+            background: none;
+            border: none;
+            color: #f44336; /* Красный */
+            font-size: 1.4em;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
+            transition: color 0.2s ease;
+        }
+        .remove-btn:hover { color: #ff8a80; }
+        .no-movies { color: #aaa; font-style: italic; padding: 30px 0; text-align: center; }
+        .back-button {
+            margin-top: 30px;
+            padding: 12px 25px;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .back-button:hover { background: #555; }
+        .icon { margin-right: 8px; }
+    </style>
+</head>
+<body>
+    <div class="watchlist-container">
+        <div class="header"><span class="icon">❤️</span> СПИСОК ЖЕЛАНИЙ</div>
+        <div id="moviesContainer">
+            <!-- Movies will be injected here by JS -->
+        </div>
+    </div>
+    <button class="back-button" onclick="goBack()">ЗАКРЫТЬ</button>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const webAppBaseUrl = new URL(window.location.href).origin + new URL(window.location.href).pathname.split('/').slice(0, -1).join('/') + '/';
+
+        function getUrlParams() {
+            const params = {};
+            new URLSearchParams(window.location.search).forEach((value, key) => {
+                params[key] = decodeURIComponent(value);
+            });
+            return params;
+        }
+
+        const params = getUrlParams();
+        const moviesContainer = document.getElementById('moviesContainer');
+
+        // Функция для отображения фильмов
+        function displayMovies(movieList) {
+            moviesContainer.innerHTML = ''; // Очищаем предыдущий список
+            if (movieList && movieList.length > 0) {
+                movieList.forEach(movie => {
+                    const movieItem = document.createElement('div');
+                    movieItem.className = 'movie-item';
+                    movieItem.onclick = () => openMovieCard(movie);
+
+                    const thumb = document.createElement('img');
+                    thumb.className = 'movie-thumb';
+                    thumb.src = movie.cover_url || 'https://via.placeholder.com/50x75/303030/FFFFFF?text=NO';
+                    thumb.alt = movie.title;
+
+                    const titleDiv = document.createElement('div');
+                    titleDiv.className = 'movie-title';
+                    titleDiv.innerText = movie.title.toUpperCase();
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-btn';
+                    removeBtn.innerHTML = '&#10006;'; // Крестик
+                    removeBtn.title = 'Удалить из списка';
+                    removeBtn.onclick = (event) => {
+                        event.stopPropagation(); // Предотвращаем вызов onclick родителя (movieItem)
+                        removeFromWatchlist(movie.id, movie.title);
+                    };
+
+                    movieItem.appendChild(thumb);
+                    movieItem.appendChild(titleDiv);
+                    movieItem.appendChild(removeBtn);
+                    moviesContainer.appendChild(movieItem);
+                });
+            } else {
+                moviesContainer.innerHTML = '<p class="no-movies">Ваш список желаний пуст.</p>';
+            }
+        }
+
+        // Функция для открытия карточки фильма
+        function openMovieCard(movie) {
+            tg.openWebApp(`${webAppBaseUrl}movie_display.html?mid=${movie.id}&title=${encodeURIComponent(movie.title)}&director=${encodeURIComponent(movie.director)}&cover_url=${encodeURIComponent(movie.cover_url || '')}&in_watchlist=true`); // Передаем in_watc
+hlist=true
+        }
+
+        // Функция для удаления фильма из списка
+        function removeFromWatchlist(movieId, movieTitle) {
+            tg.sendData(JSON.stringify({ action: 'watchlist', movie_id: movieId, action_type: 'remove' }));
+            tg.showAlert(`"${movieTitle}" будет удален из списка.`);
+            tg.close(); // Закрываем WebApp, бот сам обновит состояние
+        }
+
+        // Функция для получения данных о фильмах (предполагается, что они передаются в JSON)
+        function loadMovies() {
+            // Запрос к боту мог бы дать более актуальные данные, но для начала
+            // попробуем получить их из параметров, если бот их передал
+            const moviesJson = params.movies_json;
+            if (moviesJson) {
+                try {
+                    const movies = JSON.parse(moviesJson);
+                    displayMovies(movies);
+                } catch (e) {
+                    console.error("Error parsing movies JSON:", e);
+                    moviesContainer.innerHTML = '<p class="no-movies">Ошибка загрузки списка.</p>';
+                }
+            } else {
+                 moviesContainer.innerHTML = '<p class="no-movies">Список желаний пуст.</p>';
+            }
+        }
+
+        // Инициализация
+        loadMovies();
+
+        function goBack() {
+            tg.close();
+        }
+    </script>
+</body>
+</html>
