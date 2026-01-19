@@ -22,7 +22,7 @@ CHANNEL_URL = "https://t.me/metakreo"
 
 # --- BASE URL для GitHub Pages. Убедись, что он указывает на корневую директорию твоего репозитория! ---
 # Например: "https://yourusername.github.io/your-repo-name/"
-WEBAPP_BASE_URL = "https://cain.github.io/my-ears-bot-webapp/"
+WEBAPP_BASE_URL = "https://multiparalel89-code.github.io/my-ears-bot-webapp/"
 
 # !!! ЗАМЕНИ ЭТО !!!
 
